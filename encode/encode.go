@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"os"
-	"slices"
 
 	"github.com/go-audio/wav"
 )
@@ -13,10 +13,6 @@ import (
 type AudioData struct {
 	pcm_bytes   []int
 	sample_rate int
-}
-
-type cachedIndexes struct {
-	cache []int
 }
 
 func EncodeAudio(file *os.File, message string) error {
@@ -36,36 +32,97 @@ func EncodeAudio(file *os.File, message string) error {
 	}
 	audData := AudioData{pcm_bytes: audBuff.Data, sample_rate: audBuff.Format.SampleRate}
 
+	initMarking(&audData.pcm_bytes)
+	buff, err := insertMessageToData(audData.pcm_bytes, message)
+
+	if err != nil {
+		fmt.Println(buff)
+	}
+
 	return nil
 }
 
-func insertMessageToData(data []int, message string) []int {
+func insertMessageToData(data []int, message string) ([]int, error) {
 	idxArr := make([]int, 0)
 
 	const ASCII_UPPER_LIMIT = 128
 	const ASCII_LOWER_LIMIT = 0
 
+	//cache valid indexes
 	for i, val := range data {
-		if val < ASCII_UPPER_LIMIT && val > ASCII_LOWER_LIMIT {
+		if val < ASCII_UPPER_LIMIT && val > ASCII_LOWER_LIMIT && val > 0 {
 			idxArr = append(idxArr, i)
 		}
 	}
 
-	slices.Sort(idxArr)
-
-	for i := 0; i < len(message); i++ {
-		//data[idxArr[i]] = int(message[i])
-		//find closest value.
+	if len(message) > len(idxArr) {
+		return nil, errors.New("message is longer than allocation capacity")
 	}
-	return data
+
+	//Encode each character.
+	for i := 0; i < len(message); i++ {
+		indx := findClosestValue(data, idxArr, message[i])
+		fmt.Printf("Index: %d, Value: %d", indx, data[indx])
+		err := markValue(&data, indx-1)
+
+		if err != nil {
+			idxArr = removeIndex(idxArr, 0)
+			i--
+			continue
+		}
+		//changing PCM values to char to insert
+		data[indx] = int(message[i])
+		fmt.Printf(" msg: %d\n", int(message[i]))
+	}
+
+	return data, nil
 }
 
-func markPrevValue(data []int, currentValIndex int) error {
-	if currentValIndex != 0 {
-		if data[currentValIndex]%10 != 0 {
-			data[currentValIndex] = data[currentValIndex] - data[currentValIndex]%10
+func markValue(data *[]int, index int) error {
+	if index != 0 {
+		if (*data)[index]%10 != 0 {
+			(*data)[index] = (*data)[index] - (*data)[index]%10
 			return nil
 		}
 	}
-	return errors.New("Invalid Index")
+	return errors.New("invalid Index")
+}
+
+func findClosestValue(data []int, indexes []int, char byte) int {
+	delta := math.MaxInt32
+	index := math.MinInt32
+	for i, idx := range indexes {
+
+		if idx <= 0 {
+			continue
+		}
+		//0 is marked in data[idx-1]
+		val := data[idx]
+		markedVal := data[idx-1]
+
+		if math.Abs(float64(val-int(char))) < float64(delta) && markedVal%10 != 0 {
+			delta = val - int(char)
+			if delta < 0 {
+				delta *= -1
+			}
+
+			index = indexes[i]
+		}
+	}
+
+	return index
+
+}
+
+func removeIndex(s []int, index int) []int {
+	return append(s[:index], s[index+1:]...)
+}
+
+func initMarking(data *[]int) {
+	for i, val := range *data {
+		if val%10 == 0 {
+			(*data)[i]++
+		}
+	}
+
 }
