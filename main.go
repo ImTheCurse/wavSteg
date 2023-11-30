@@ -1,8 +1,18 @@
-package example
+package main
 
-import "fmt"
+import (
+	"os"
 
-func SayHello() {
+	"github.com/ImTheCurse/wavSteg/encode"
+)
 
-	fmt.Println("hello world!")
+func main() {
+
+	fp, err := os.Open("CantinaBand3.wav")
+
+	if err != nil {
+		return
+	}
+	encode.EncodeAudio(fp)
+
 }
