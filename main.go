@@ -14,5 +14,4 @@ func main() {
 		return
 	}
 	encode.EncodeAudio(fp, "hello beautiful world! its getting a bit late but I believe we can do this not on our own' but together")
-
 }

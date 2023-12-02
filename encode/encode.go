@@ -16,7 +16,6 @@ type AudioData struct {
 }
 
 func EncodeAudio(file *os.File, message string) error {
-	fmt.Println("hello")
 	decWav := wav.NewDecoder(file)
 
 	if decWav == nil {
@@ -34,9 +33,9 @@ func EncodeAudio(file *os.File, message string) error {
 
 	initMarking(&audData.pcm_bytes)
 	buff, err := insertMessageToData(audData.pcm_bytes, message)
-
+	buff = buff
 	if err != nil {
-		fmt.Println(buff)
+		fmt.Println(err)
 	}
 
 	return nil
@@ -59,10 +58,17 @@ func insertMessageToData(data []int, message string) ([]int, error) {
 		return nil, errors.New("message is longer than allocation capacity")
 	}
 
+	indx := idxArr[0]
+	var ero error
 	//Encode each character.
 	for i := 0; i < len(message); i++ {
-		indx := findClosestValue(data, idxArr, message[i])
-		fmt.Printf("Index: %d, Value: %d", indx, data[indx])
+		indx, ero = findClosestValue(data, idxArr, indx, message[i])
+
+		//fmt.Printf("Index: %d, Value: %d", indx, data[indx])
+		if ero != nil {
+			return data, ero
+		}
+
 		err := markValue(&data, indx-1)
 
 		if err != nil {
@@ -72,7 +78,7 @@ func insertMessageToData(data []int, message string) ([]int, error) {
 		}
 		//changing PCM values to char to insert
 		data[indx] = int(message[i])
-		fmt.Printf(" msg: %d\n", int(message[i]))
+		//fmt.Printf(" msg: %d\n", int(message[i]))
 	}
 
 	return data, nil
@@ -88,12 +94,13 @@ func markValue(data *[]int, index int) error {
 	return errors.New("invalid Index")
 }
 
-func findClosestValue(data []int, indexes []int, char byte) int {
+func findClosestValue(data []int, indexes []int, startIndex int, char byte) (int, error) {
 	delta := math.MaxInt32
 	index := math.MinInt32
 	for i, idx := range indexes {
 
-		if idx <= 0 {
+		if idx <= 0 || idx < startIndex {
+
 			continue
 		}
 		//0 is marked in data[idx-1]
@@ -107,10 +114,16 @@ func findClosestValue(data []int, indexes []int, char byte) int {
 			}
 
 			index = indexes[i]
+			//Defined close enough similarity between 2 and 0.
+			if delta <= 2 && delta >= 0 {
+				return index, nil
+			}
 		}
 	}
-
-	return index
+	if index < 0 {
+		return 0, errors.New("message too long to encode, supply bigger image or a smaller message")
+	}
+	return index, nil
 
 }
 
