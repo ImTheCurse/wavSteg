@@ -10,6 +10,8 @@ import (
 	"github.com/go-audio/wav"
 )
 
+const LSD_MARKING = 500
+
 type AudioData struct {
 	pcm_bytes   []int
 	sample_rate int
@@ -84,7 +86,7 @@ func insertMessageToData(data []int, message string) ([]int, error) {
 			return data, ero
 		}
 
-		err := markValue(&data, indx-1)
+		err := markValue(&data, indx-1, int(message[i]))
 		if err != nil {
 			idxArr = removeIndex(idxArr, 0)
 			i--
@@ -92,14 +94,21 @@ func insertMessageToData(data []int, message string) ([]int, error) {
 		}
 		// changing PCM values to char to insert
 		data[indx] = int(message[i])
-		// fmt.Printf(" msg: %d\n", int(message[i]))
+
 	}
 
 	return data, nil
 }
 
-func markValue(data *[]int, index int) error {
-	if index != 0 {
+func markValue(data *[]int, index int, char int) error {
+	if index != 0 && index < len(*data) {
+		// if place isn't marked and char is n or x or d, mark the next spot so there will be no character afterwards.
+		if (*data)[index]%10 != 0 && char%10 == 0 {
+			(*data)[index] = (*data)[index] - (*data)[index]%10
+			(*data)[index+2] = LSD_MARKING
+			return nil
+		}
+
 		if (*data)[index]%10 != 0 {
 			(*data)[index] = (*data)[index] - (*data)[index]%10
 			return nil

@@ -1,15 +1,18 @@
 package main
 
 import (
+	"os"
+
 	"github.com/ImTheCurse/wavSteg/Decode"
+	"github.com/ImTheCurse/wavSteg/encode"
 )
 
 func main() {
-	//fmt.Println("hello world!")
-	//fp, err := os.Open("CantinaBand3.wav")
-	//if err != nil {
-	//return
-	//}
-	// encode.EncodeAudio(fp, "hello beautiful world! its getting a bit late but I believe we can do this not on our own' but together")
+	fp, err := os.Open("CantinaBand3.wav")
+	if err != nil {
+		return
+	}
+	encode.EncodeAudio(fp, "isn't it insane that computers can do these kind of stuff?")
+
 	Decode.Decode("enc_file.wav")
 }

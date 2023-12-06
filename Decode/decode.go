@@ -15,7 +15,6 @@ func Decode(fname string) {
 	defer fp.Close()
 
 	var decodedMessage string
-
 	Dec := wav.NewDecoder(fp)
 	buff, err := Dec.FullPCMBuffer()
 	if err != nil {
@@ -23,13 +22,17 @@ func Decode(fname string) {
 	}
 
 	for i, val := range buff.Data {
-		if checkMarked(val) {
-			decodedMessage += string(buff.Data[i+1])
+		if i == 0 {
+			continue
+		}
+		if checkMarked(val, buff.Data[i-1]) {
+			decodedMessage += string(byte(buff.Data[i+1]))
 		}
 	}
-	fmt.Printf("%s", decodedMessage)
+	decodedMessage += "\n"
+	fmt.Print(decodedMessage)
 }
 
-func checkMarked(val int) bool {
-	return val%10 == 0
+func checkMarked(val int, prevVal int) bool {
+	return val%10 == 0 && prevVal%10 != 0
 }
