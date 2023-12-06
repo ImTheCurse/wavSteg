@@ -24,7 +24,6 @@ func EncodeAudio(file *os.File, message string) error {
 	}
 
 	audBuff, err := decWav.FullPCMBuffer()
-
 	if err != nil {
 		log.Fatal("Error getting buffer.")
 		return nil
@@ -33,10 +32,26 @@ func EncodeAudio(file *os.File, message string) error {
 
 	initMarking(&audData.pcm_bytes)
 	buff, err := insertMessageToData(audData.pcm_bytes, message)
-	buff = buff
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	out, err := os.Create("enc_file.wav")
+	if err != nil {
+		panic(fmt.Sprint("couldn't create output file - %v", err))
+	}
+
+	audBuff.Data = buff
+
+	encEncoder := wav.NewEncoder(out, audBuff.Format.SampleRate, int(decWav.BitDepth), audBuff.Format.NumChannels, int(decWav.WavAudioFormat))
+
+	if err = encEncoder.Write(audBuff); err != nil {
+		panic(err)
+	}
+	if err = encEncoder.Close(); err != nil {
+		panic(err)
+	}
+	out.Close()
 
 	return nil
 }
@@ -47,7 +62,7 @@ func insertMessageToData(data []int, message string) ([]int, error) {
 	const ASCII_UPPER_LIMIT = 128
 	const ASCII_LOWER_LIMIT = 0
 
-	//cache valid indexes
+	// cache valid indexes
 	for i, val := range data {
 		if val < ASCII_UPPER_LIMIT && val > ASCII_LOWER_LIMIT && val > 0 {
 			idxArr = append(idxArr, i)
@@ -60,25 +75,24 @@ func insertMessageToData(data []int, message string) ([]int, error) {
 
 	indx := idxArr[0]
 	var ero error
-	//Encode each character.
+	// Encode each character.
 	for i := 0; i < len(message); i++ {
 		indx, ero = findClosestValue(data, idxArr, indx, message[i])
 
-		//fmt.Printf("Index: %d, Value: %d", indx, data[indx])
+		// fmt.Printf("Index: %d, Value: %d", indx, data[indx])
 		if ero != nil {
 			return data, ero
 		}
 
 		err := markValue(&data, indx-1)
-
 		if err != nil {
 			idxArr = removeIndex(idxArr, 0)
 			i--
 			continue
 		}
-		//changing PCM values to char to insert
+		// changing PCM values to char to insert
 		data[indx] = int(message[i])
-		//fmt.Printf(" msg: %d\n", int(message[i]))
+		// fmt.Printf(" msg: %d\n", int(message[i]))
 	}
 
 	return data, nil
@@ -100,10 +114,9 @@ func findClosestValue(data []int, indexes []int, startIndex int, char byte) (int
 	for i, idx := range indexes {
 
 		if idx <= 0 || idx < startIndex {
-
 			continue
 		}
-		//0 is marked in data[idx-1]
+		// 0 is marked in data[idx-1]
 		val := data[idx]
 		markedVal := data[idx-1]
 
@@ -114,7 +127,7 @@ func findClosestValue(data []int, indexes []int, startIndex int, char byte) (int
 			}
 
 			index = indexes[i]
-			//Defined close enough similarity between 2 and 0.
+			// Defined close enough similarity between 2 and 0.
 			if delta <= 2 && delta >= 0 {
 				return index, nil
 			}
@@ -124,7 +137,6 @@ func findClosestValue(data []int, indexes []int, startIndex int, char byte) (int
 		return 0, errors.New("message too long to encode, supply bigger image or a smaller message")
 	}
 	return index, nil
-
 }
 
 func removeIndex(s []int, index int) []int {
@@ -137,5 +149,4 @@ func initMarking(data *[]int) {
 			(*data)[i]++
 		}
 	}
-
 }
