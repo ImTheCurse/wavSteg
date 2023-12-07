@@ -10,7 +10,7 @@ import (
 	"github.com/go-audio/wav"
 )
 
-const LSD_MARKING = 500
+const LSD_MARKING = 501
 
 type AudioData struct {
 	pcm_bytes   []int
@@ -122,7 +122,7 @@ func findClosestValue(data []int, indexes []int, startIndex int, char byte) (int
 	index := math.MinInt32
 	for i, idx := range indexes {
 
-		if idx <= 0 || idx < startIndex {
+		if idx <= 0 || idx <= startIndex+1 {
 			continue
 		}
 		// 0 is marked in data[idx-1]
