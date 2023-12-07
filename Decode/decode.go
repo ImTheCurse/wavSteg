@@ -1,7 +1,7 @@
 package Decode
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/go-audio/wav"
@@ -30,7 +30,17 @@ func Decode(fname string) {
 		}
 	}
 	decodedMessage += "\n"
-	fmt.Print(decodedMessage)
+
+	f, err := os.Create("results/dec_msg.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	_, err2 := f.WriteString(decodedMessage)
+	if err2 != nil {
+		log.Fatal(err2)
+	}
 }
 
 func checkMarked(val int, prevVal int) bool {
